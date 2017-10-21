@@ -10,14 +10,36 @@ export default class Ship{
     this.y = screenHeight / 2;
     this.angle = -90;
     this.health = 3;
+    this.direction = '';
   }
 
   // Updates the ship
-  update(){
-    this.x += Math.cos(this.angle);
-    this.y += Math.sin(this.angle);
-
-    //Handle rotate
+  update(input){
+    this.direction = input.direction;
+    switch(this.direction){
+      case 'forward':
+        this.x += Math.cos(this.angle);
+        this.y += Math.sin(this.angle);
+        break;
+      case 'rotateLeft':
+        this.angle -= 0.05;
+        break;
+      case 'rotateRight':
+        this.angle += 0.05;
+        break;
+      case 'stop':
+        this.x += 0;
+        this.y += 0;
+        break;
+      case 'stopRightRotate':
+        this.angle += 0;
+        break;
+      case 'stopLeftRotate':
+        this.angle -= 0;
+        break;
+      default:
+        break;
+    }
 
     // Screen wrap
     this.checkBounds();
@@ -40,22 +62,20 @@ export default class Ship{
     }
   }
 
-  shoot(){
-
-  }
-
   // Render the ship on the canvas
   render(ctx){
     ctx.save();
-    ctx.strokeStyle = "#fff";
-    ctx.beginPath();
-    ctx.rotate(this.angle);
+    ctx.strokeStyle = 'green';
+    ctx.fillStyle = 'green';
     ctx.translate(this.x, this.y);
-    ctx.moveTo(0, -5);
-    ctx.lineTo(2, 5);
-    ctx.lineTo (2, -5);
+    ctx.rotate(this.angle);
+    ctx.beginPath();
+    ctx.moveTo(15, 0);
+    ctx.lineTo(-5, -10);
+    ctx.lineTo(-10, 0);
+    ctx.lineTo(-5, 10);
     ctx.closePath();
-    ctx.stroke();
+    ctx.fill();
     ctx.restore();
   }
 }

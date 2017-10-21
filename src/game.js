@@ -8,26 +8,61 @@ import Bullet from './bullet';
 **/
 export default class Game{
   constructor(){
-    //Get all the objects
+    this.input = {
+      direction: ''
+    }
+    this.score = 0;
+    this.gameover = false;
+    this.shipHealth = 3;
 
     //Create canvas
     this.canvas = document.createElement('canvas');
-    this.canvas.width = 300;
-    this.canvas.height = 300;
+    this.canvas.width = 500;
+    this.canvas.height = 500;
     this.ctx = this.canvas.getContext('2d');
     document.body.appendChild(this.canvas);
 
     //Create ship and bullets
     this.ship = new Ship(this.canvas.width, this.canvas.height);
     this.bullets = [];
+    this.shot = false;
+    this.round = 1;
 
     //Create asteroids
     this.asteroids = [];
-    for(var i = 0; i < 10; i++){
-      var asteroid = new Asteroid(this.canvas.width, this.canvas.height);
-      this.asteroids.push(asteroid);
+    this.amount = 9;
+    for(var i = 0; i < this.amount; i++){
+      this.asteroid = new Asteroid(this.canvas.width, this.canvas.height, 0, 0, 0, 0, 'largeAsteroid');
+      this.asteroids.push(this.asteroid);
     }
+
+    //Game sounds
+    var shipSound = document.createElement('audio');
+    shipSound.id = 'shipSound';
+    shipSound.type = 'audio/wav';
+    shipSound.src = 'Explosion.wav';
+    document.body.appendChild(shipSound);
+
+    var bulletSound = document.createElement('audio');
+    bulletSound.id = 'bulletSound';
+    bulletSound.type = 'audio/wav';
+    bulletSound.src = 'Bullet.wav';
+    document.body.appendChild(bulletSound);
+
+    var collisionSound = document.createElement('audio');
+    collisionSound.id = 'collisionSound';
+    collisionSound.type = 'audo/wav';
+    collisionSound.src = 'Collision.wav';
+    document.body.appendChild(collisionSound);
+
     //Bind functions
+    this.shipHit = this.shipHit.bind(this);
+    this.bulletHit = this.bulletHit.bind(this);
+    this.asteroidHit = this.asteroidHit.bind(this);
+    this.mapCheck = this.mapCheck.bind(this);
+    this.shipDestroyed = this.shipDestroyed.bind(this);
+    this.gameOver = this.gameOver.bind(this);
+    this.nextRound = this.nextRound.bind(this);
     this.handleKeyDown = this.handleKeyDown.bind(this);
     this.handleKeyUp = this.handleKeyUp.bind(this);
     this.update = this.update.bind(this);
@@ -37,92 +72,280 @@ export default class Game{
     window.onkeydown = this.handleKeyDown;
     window.onkeyup = this.handleKeyUp;
 
-    setInterval(this.loop, 1);
+    setInterval(this.loop, 10);
   }
 
 
   // Handle a key press to move ship
   handleKeyDown(event){
     event.preventDefault();
-    switch(event.keyCode){
-      case 87:
+    switch(event.key){
+      case "w":
+      case 'ArrowUp':
         //w key Move up
+        this.input.direction = 'forward'
         break;
-      case 83:
-        //s key move down
-        break;
-      case 65:
+      case "a":
+      case 'ArrowLeft':
         //a key rotate left
+        this.input.direction = 'rotateLeft';
         break;
-      case 68:
+      case "d":
+      case 'ArrowRight':
         //d key rotate right
+        this.input.direction = 'rotateRight';
         break;
-      case 32:
+      case " ":
         //space shoot bullet
+        this.shot = true;
+        break;
+      default:
+        break;
     }
   }
+
 
   // Handle a key release
   handleKeyUp(event){
     event.preventDefault();
-    switch(event.keyCode){
-      case 87:
-        //w key Move up
+    switch(event.key){
+      //W key: move forward
+      case 'w':
+      case 'ArrowUp':
+        this.input.direction = 'stop';
         break;
-      case 83:
-        //s key move down
+      //A key: rotate left
+      case 'a':
+      case 'ArrowLeft':
+        this.input.direction = 'stopLeftRotate';
         break;
-      case 65:
-        //a key rotate left
+      //D key: rotate right
+      case 'd':
+      case 'ArrowRight':
+        this.input.direction = 'stopRightRotate';
         break;
-      case 68:
-        //d key rotate right
+      //Space key: shoot bullet
+      case " ":
+        this.shot = false;
         break;
-      case 32:
-        //space shoot bullet
+      default:
+        break;
+    }
+  }
+
+  drawControls(){
+    this.ctx.fillStyle = 'green';
+    this.ctx.font = 'bold 12px sans serif';
+    this.ctx.fillText("Forward: W/↑ | Turn Right: D/→ | Turn Left: A/← | Shoot: SpaceBar", 5, 15);
+  }
+
+  drawInfo(){
+    //Draw player info
+    this.ctx.fillStyle = "green";
+    this.ctx.font = "bold 14px sans serif";
+    this.ctx.fillText('Health: ' + this.shipHealth, 5, 495);
+    this.ctx.fillText('Round: ' + this.round, 75, 495);
+    this.ctx.fillText('Score: ' + this.score, 145, 495);
+  }
+
+  gameOver(){
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.fillStyle = "green";
+    this.ctx.font = 'bold 30px sans serif';
+    this.ctx.fillText("GAME OVER!", 150, 250);
+    this.ctx.fillText("Your Final Score: " + this.score , 110, 300);
+  }
+
+  newRound(){
+    var numAsteroids = this.asteroids.length;
+    var empty = true;
+    for(var i = 0; i < numAsteroids; i++){
+      if(this.asteroids[i].health > 0){
+        empty = false;
+        break;
+      }
+    }
+    if(empty) {this.nextRound(); }
+  }
+
+  nextRound(){
+    if(this.shipHealth === 0 ){
+      this.gameOver = true;
+    }
+    else{
+      this.round += 1;
+      this.amount += 5;
+      for(var i = 0; i < this.amount; i++){
+        this.asteroid = new Asteroid(this.canvas.width, this.canvas.height, 0, 0, 0, 0, 'largeAsteroid');
+        this.asteroids.push(this.asteroid);
+      }
+    }
+  }
+
+  shipDestroyed(){
+    if(this.shipHealth === 0){
+      this.gameover = true;
+    }
+    else{
+      this.ship = new Ship(this.canvas.width, this.canvas.height);
+      this.bullets = [];
+      this.shipHealth -= 1;
+      var shipSound = document.getElementById('shipSound');
+      shipSound.play();
+    }
+  }
+
+  shipHit(){
+    var hit = false;
+    var numAsteroids = this.asteroids.length;
+    for(var i = 0; i < numAsteroids; i++){
+      var current = this.asteroids[i];
+      if(current.health < 1) continue;
+      if(current.x > this.ship.x - 22 && current.x < this.ship.x + 22){
+          if(current.y > this.ship.y - 23 && current.y < this.ship.y + 23){
+            hit = true;
+            break;
+        }
+      }
+    }
+    //Destory ship
+    if(hit){this.shipDestroyed();}
+    else {this.ship.update(this.input);}
+  }
+
+  mapCheck(){
+    var numAsteroids = this.asteroids.length;
+    var mapCleared = true;
+    for(var i = 0; i < numAsteroids; i++){
+      if(this.asteroids[i].health > 0){
+        mapCleared = false;
+        break;
+      }
+    }
+    //Create new wave
+    if(mapCleared){}
+  }
+
+  asteroidHit(){
+    var numAsteroids = this.asteroids.length;
+    for(var i = 0; i < numAsteroids; i++){
+      var current = this.asteroids[i];
+      if(current.health < 1) continue;
+      var hit = false
+      for(var j = 0; j < numAsteroids; j++){
+        if(i !== j){
+          var newAsteroid = this.asteroids[i];
+          if(newAsteroid.health < 1) continue;
+          //Compare current and newAsteroid
+          if(current.x > newAsteroid.x && current.x < newAsteroid.x){
+              if(current.y > newAsteroid.y && current.y < newAsteroid.y)
+              {
+                hit = true;
+                var collisionSound = document.getElementById('collisionSound');
+                collisionSound.play();
+              }
+          }
+        }
+      }
+      this.asteroids[i].update(hit, false, false);
+    }
+  }
+
+  bulletHit(){
+    if(this.shot){
+      var bullet = new Bullet(this.canvas.width, this.canvas.height);
+      this.bullets.push(bullet);
+      var bulletSound = document.getElementById('bulletSound');
+      bulletSound.play();
+    }
+
+    var numBullets = this.bullets.length;
+    var numAsteroids = this.asteroids.length;
+
+    for(var b = 0; b < numBullets; b++){
+      var currBullet = this.bullets[b];
+      var hit = false;
+      var destroy = false;
+      var splitAsteroid = null;
+      var splitAsteroid2 = null;
+      if(currBullet.hit) {continue;}
+      for(var i = 0; i < numAsteroids; i++){
+        var currAsteroid = this.asteroids[i];
+        //console.log(currAsteroid.x);
+        //console.log(currBullet.x);
+        if(currAsteroid.health < 1 ) {continue;}
+        if(currAsteroid.x >= currBullet.x - 15 && currAsteroid.x <= currBullet.x + 15){
+           if(currAsteroid.y <= currBullet.y + 20 &&  currAsteroid.y >= currBullet.y - 20){
+               hit = true;
+               var shipSound = document.getElementById('shipSound');
+               shipSound.play();
+               currAsteroid.update(false, false, true);
+               if(currAsteroid.size === "smallAsteroid" && currAsteroid.health < 1){
+                 this.score += 5;
+               }
+            if(currAsteroid.size === "largeAsteroid" && currAsteroid.health < 1){
+              this.score += 3;
+              destroy = true;
+              var splitX = currAsteroid.x;
+              var splitY = currAsteroid.y;
+              var splitSpeed = currAsteroid.speed * 0.85;
+              var splitAngle = Math.random() * 10;
+              var splitAngle2 = splitAngle * 0.25;
+              splitAsteroid = new Asteroid(this.canvas.width, this.canvas.height, splitX, splitY, splitSpeed, splitAngle, 'smallAsteroid');
+              splitAsteroid2 = new Asteroid(this.canvas.width, this.canvas.height, splitX, splitY, splitSpeed, splitAngle2, 'smallAsteroid');
+            }
+        }
+        }
+      }
+      if(destroy){
+        //Push smaller asteroids
+        this.asteroids.push(splitAsteroid);
+        this.asteroids.push(splitAsteroid2);
+      }
+      this.bullets[b].update(this.ship.x, this.ship.y, this.ship.angle, hit);
     }
   }
 
   update(){
-    //Handle collison
-
-    var numAsteroids = this.asteroids.length;
-    for(var i = 0; i < numAsteroids; i++){
-      var current = this.asteroids[i];
-      if(current.health < 1){continue};
-      //Check if asteroids hits ship
-
-      //If ship is hit destroy it otherwise update ship
-
-      for(var i = 0; i < numAsteroids; i++){
-        var current = this.asteroids[i];
-        if(current.health < 1) continue;
-        //Check if asteroid is hit by bullet
-
-      }
-
-      //Check if bullets are hitting asteroids
-    }
+    //Create asteroids and check for collision
+    this.mapCheck();
+    this.shipHit();
+    this.asteroidHit();
+    this.bulletHit();
+    this.newRound();
   }
 
   render(){
     //Clear canvas
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    //Render ship
+    //Render ship and bullets
     this.ship.render(this.ctx);
 
+    var numBullets = this.bullets.length;
+    for(var j = 0; j < numBullets; j++){
+      if(this.bullets[j].hit) {continue;}
+      this.bullets[j].render(this.ctx);
+    }
+
     //Render asteroids
-    var num = this.asteroids.length;
-    for(var i = 0; i < num; i++){
+    var numAsteroids = this.asteroids.length;
+    for(var i = 0; i < numAsteroids; i++){
+      if(this.asteroids[i].health < 1) {continue;}
       this.asteroids[i].render(this.ctx);
     }
-    //Render bullets
 
+    this.drawInfo();
+    this.drawControls();
   }
 
   loop(){
-    this.update();
-    this.render();
+    if(this.gameover){
+      this.gameOver();
+    }
+    else{
+      this.update();
+      this.render();
+    }
   }
 }
