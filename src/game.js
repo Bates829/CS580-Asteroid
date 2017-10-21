@@ -3,8 +3,7 @@ import Asteroid from './asteroid';
 import Bullet from './bullet';
 
 /** @class game
-*
-*
+* Creates the game and its objects
 **/
 export default class Game{
   constructor(){
@@ -59,7 +58,6 @@ export default class Game{
     this.shipHit = this.shipHit.bind(this);
     this.bulletHit = this.bulletHit.bind(this);
     this.asteroidHit = this.asteroidHit.bind(this);
-    this.mapCheck = this.mapCheck.bind(this);
     this.shipDestroyed = this.shipDestroyed.bind(this);
     this.gameOver = this.gameOver.bind(this);
     this.nextRound = this.nextRound.bind(this);
@@ -133,14 +131,15 @@ export default class Game{
     }
   }
 
+  //Draw controls to canvas
   drawControls(){
     this.ctx.fillStyle = 'green';
     this.ctx.font = 'bold 12px sans serif';
     this.ctx.fillText("Forward: W/↑ | Turn Right: D/→ | Turn Left: A/← | Shoot: SpaceBar", 5, 15);
   }
 
+  //Draw player info to canvas
   drawInfo(){
-    //Draw player info
     this.ctx.fillStyle = "green";
     this.ctx.font = "bold 14px sans serif";
     this.ctx.fillText('Health: ' + this.shipHealth, 5, 495);
@@ -148,6 +147,7 @@ export default class Game{
     this.ctx.fillText('Score: ' + this.score, 145, 495);
   }
 
+  //Game over message
   gameOver(){
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.ctx.fillStyle = "green";
@@ -156,6 +156,7 @@ export default class Game{
     this.ctx.fillText("Your Final Score: " + this.score , 110, 300);
   }
 
+  //Checks if new round should start
   newRound(){
     var numAsteroids = this.asteroids.length;
     var empty = true;
@@ -168,6 +169,7 @@ export default class Game{
     if(empty) {this.nextRound(); }
   }
 
+  //Starts a new round
   nextRound(){
     if(this.shipHealth === 0 ){
       this.gameOver = true;
@@ -182,6 +184,7 @@ export default class Game{
     }
   }
 
+  //Checks if the ship is out of health or died
   shipDestroyed(){
     if(this.shipHealth === 0){
       this.gameover = true;
@@ -195,6 +198,7 @@ export default class Game{
     }
   }
 
+  //Checks if ship is hit by an asteroid
   shipHit(){
     var hit = false;
     var numAsteroids = this.asteroids.length;
@@ -208,24 +212,13 @@ export default class Game{
         }
       }
     }
+
     //Destory ship
     if(hit){this.shipDestroyed();}
     else {this.ship.update(this.input);}
   }
 
-  mapCheck(){
-    var numAsteroids = this.asteroids.length;
-    var mapCleared = true;
-    for(var i = 0; i < numAsteroids; i++){
-      if(this.asteroids[i].health > 0){
-        mapCleared = false;
-        break;
-      }
-    }
-    //Create new wave
-    if(mapCleared){}
-  }
-
+  //Checks if asteroids hit each other
   asteroidHit(){
     var numAsteroids = this.asteroids.length;
     for(var i = 0; i < numAsteroids; i++){
@@ -236,7 +229,6 @@ export default class Game{
         if(i !== j){
           var newAsteroid = this.asteroids[i];
           if(newAsteroid.health < 1) continue;
-          //Compare current and newAsteroid
           if(current.x > newAsteroid.x && current.x < newAsteroid.x){
               if(current.y > newAsteroid.y && current.y < newAsteroid.y)
               {
@@ -251,6 +243,7 @@ export default class Game{
     }
   }
 
+  //Checks if bullet hits an asteroid
   bulletHit(){
     if(this.shot){
       var bullet = new Bullet(this.canvas.width, this.canvas.height);
@@ -306,15 +299,15 @@ export default class Game{
     }
   }
 
+  //Updates the game
   update(){
-    //Create asteroids and check for collision
-    this.mapCheck();
     this.shipHit();
     this.asteroidHit();
     this.bulletHit();
     this.newRound();
   }
 
+  //Renders objects to canvas
   render(){
     //Clear canvas
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -339,6 +332,7 @@ export default class Game{
     this.drawControls();
   }
 
+  //Game loop
   loop(){
     if(this.gameover){
       this.gameOver();
